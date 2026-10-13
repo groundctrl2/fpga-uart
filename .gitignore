@@ -9,4 +9,4 @@ __pycache__/
 
 # Generated waveform files.
 *.vcd
-*.fst
+*.fstsource 
