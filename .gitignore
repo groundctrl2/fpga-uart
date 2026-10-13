@@ -1,0 +1,12 @@
+# Compiled simulation files and test results.
+sim_build/
+results.xml
+build-log.txt
+
+# Python bytecode and local virtual environments.
+__pycache__/
+.venv/
+
+# Generated waveform files.
+*.vcd
+*.fst
