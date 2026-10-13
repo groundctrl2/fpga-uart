@@ -1,4 +1,4 @@
-# fpga-uart-tx-rx
+# fpga-uart
 A UART (Universal Asynchronous Receiver/Transmitter) implementation written in SystemVerilog, designed to transmit and receive serial data through configurable digital hardware.
 
 This project focuses on FPGA-oriented digital design, serial communication protocols, and hardware verification. The transmitter (TX) and receiver (RX) will be developed and tested using simulation, without requiring physical FPGA hardware.
