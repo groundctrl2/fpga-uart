@@ -2,13 +2,14 @@
 
 // UART transmitter: 8 data bits, no parity, and 1 stop bit.
 // At 50 MHz, 434 clocks per bit gives a baud rate of 115,207 (50M/434).
+// CLKS_PER_BIT must be at least 1.
 module uart_tx #(parameter integer CLKS_PER_BIT = 434) (
     input  logic clk, // System clock; the testbench uses 50 MHz.
     input  logic reset, // Active-high synchronous reset.
     input logic [7:0] data_in, // Byte to transmit.
     input logic send, // One-cycle request; accepted only when idle. 
     output logic tx, // UART serial output.
-    output logic busy // High throughout the start, data, and stop bits; low when idle.
+    output logic busy // High while sending a frame; low when ready.
 );
     // UART line levels.
     localparam logic UART_IDLE = 1'b1; // Idle state is high.
@@ -28,13 +29,13 @@ module uart_tx #(parameter integer CLKS_PER_BIT = 434) (
     } state_t;
 
     state_t state; // Current state of the transmitter.
-    logic [7:0] shift_reg; // Stores the byte so input changes cannot affect an active frame.
-    logic [2:0] bit_index; // Identifies data bit currently on TX (0-7).
-    integer unsigned baud_count; // Counts clock cycles within the current serial bit. CLKS_PER_BIT must be at least 1.
+    logic [7:0] shift_reg; // Stores the byte being sent, even if data_in changes.
+    logic [2:0] bit_index; // Which data bit is being sent (0-7).
+    integer unsigned baud_count; // Counts clock cycles spent sending each bit.
 
 
     always_ff @(posedge clk) begin
-	    // Reset takes effect on a rising clock edge.
+	    // On a rising clock edge, reset stops any transmission and returns TX to idle.
         if (reset) begin 
             state <= IDLE;
             busy <= TX_READY;
@@ -46,14 +47,13 @@ module uart_tx #(parameter integer CLKS_PER_BIT = 434) (
         // Process the state machine.
         end else begin
             case (state)
-                // When idle, the transmitter is ready to accept a new byte to send.
+                // Wait for a request to send a byte.
                 IDLE: begin
                     busy <= TX_READY;
                     tx <= UART_IDLE;
                     baud_count <= 0;
 
-                    // Capture the byte and begin transmission if the send signal is asserted.
-                    // Changes to send are ignored in all other states.
+                    // Save the byte and start sending. Requests made while busy are ignored. 
                     if (send) begin
                         state <= START;
                         shift_reg <= data_in; // Load the shift register.
@@ -70,7 +70,7 @@ module uart_tx #(parameter integer CLKS_PER_BIT = 434) (
                         baud_count <= 0;
                         tx <= shift_reg[0]; // Send the LSB.
                     end else begin
-                        baud_count <= baud_count + 1;
+                        baud_count <= baud_count + 1; // Count another clock.
                     end
                 end
 
@@ -79,7 +79,7 @@ module uart_tx #(parameter integer CLKS_PER_BIT = 434) (
                     if (baud_count == CLKS_PER_BIT - 1) begin // Hold for one bit period.
                         baud_count <= 0;
 
-                        // Bit 7 has completed transmission, so move to the stop bit.
+                        // // All 8 bits have been sent.
                         if (bit_index == 7) begin
                             state <= STOP;
                             tx <= UART_STOP;
@@ -87,13 +87,12 @@ module uart_tx #(parameter integer CLKS_PER_BIT = 434) (
                         // Send the next bit, working from LSB to MSB. 
                         end else begin
                             // Both assignments read the old shift_reg value.
-                            // Output the next bit and shift it into position 0.
-                            tx <= shift_reg[1];
-                            shift_reg <= shift_reg >> 1;
-                            bit_index <= bit_index + 1'b1; // Increment the bit index.
+                            tx <= shift_reg[1]; // Send the next bit.
+                            shift_reg <= shift_reg >> 1; // Move the remaining bits one place right.
+                            bit_index <= bit_index + 1'b1; // Move to the next bit number.
                         end
                     end else begin
-                        baud_count <= baud_count + 1;
+                        baud_count <= baud_count + 1; // Count another clock.
                     end
                 end
 
@@ -104,11 +103,11 @@ module uart_tx #(parameter integer CLKS_PER_BIT = 434) (
                         busy <= TX_READY;
                         baud_count <= 0;
                     end else begin
-                        baud_count <= baud_count + 1;
+                        baud_count <= baud_count + 1; // Count another clock.
                     end 
                 end
 
-                // Return to idle on any unexpected/invalid state.
+                // Return to idle if the state is invalid.
                 default: begin
                     state <= IDLE;
                     tx <= UART_IDLE;
