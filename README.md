@@ -26,7 +26,7 @@ This project focuses on FPGA-oriented digital design, serial communication proto
 | Tool | Purpose |
 |---|---|
 | SystemVerilog | UART TX/RX hardware implementation |
-| Verilator | HDL simulation and linting |
+| Icarus Verilog | SystemVerilog simulation through cocotb |
 | Python/cocotb | Test generation and automated verification |
 | GTKWave | Digital waveform visualization |
 | GitHub Actions | Continuous integration and automated testing |
@@ -51,5 +51,8 @@ Python-based cocotb testbenches will independently validate TX and RX behavior b
 ## References
 - [OpenTitan UART Documentation](https://opentitan.org/book/hw/ip/uart/)
 - [OpenTitan UART Verification Plan](https://github.com/lowRISC/opentitan/blob/master/hw/ip/uart/data/uart_testplan.hjson)
+- [Nandland UART Tutorial](https://nandland.com/uart-serial-port-module/)
 - [Verilator Documentation](https://verilator.org/guide/latest/)
 - [cocotb Documentation](https://docs.cocotb.org/en/stable/)
+- [MSYS2 Documentation](https://www.msys2.org/)
+- [Icarus Verilog Documentation](https://steveicarus.github.io/iverilog/)
