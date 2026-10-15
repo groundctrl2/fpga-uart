@@ -1,5 +1,6 @@
 # Compiled simulation files and test results.
 sim_build/
+sim_build_*/
 results.xml
 build-log.txt
 
