@@ -14,9 +14,9 @@ async def run_clock(dut):
     """Generate a 50 MHz clock until the test ends."""
     while True:
         dut.clk.value = 0
-        await Timer(CLOCK_NS // 2, unit="ns")
+        await Timer(CLOCK_NS // 2, unit="ns") # Keep the clock low for 10 ns.
         dut.clk.value = 1
-        await Timer(CLOCK_NS // 2, unit="ns")
+        await Timer(CLOCK_NS // 2, unit="ns") # Keep the clock high for 10 ns.
 
 # Helper: Wait a set number of clocks.
 async def wait_clocks(cycles):
