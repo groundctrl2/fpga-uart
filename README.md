@@ -80,8 +80,12 @@ Waveform inspection confirmed:
 
 ![One-clock data_valid pulse lasting 20 ns](docs/images/uart_loopback_ascii_a_valid_pulse.png)
 
+
+## Completed Verification
+TX and RX are tested independently before being tested together in loopback.
+
+| Area | Completed Checks |
 |---|---|
-| Basic Transmission | Verify transmission and reception of `0x41` (ASCII 'A'). |
 | Full Byte Range | Test all 256 possible 8-bit values (`0x00`–`0xFF`). |
 | Alternating Bits | Test `0x55` and `0xAA` to verify bit ordering and transitions. |
 | Randomized Traffic | Test 10,000 reproducibly generated random bytes. |
