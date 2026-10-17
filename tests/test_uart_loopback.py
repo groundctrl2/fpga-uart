@@ -1,5 +1,6 @@
 """UART loopback verification: send bytes through TX and check RX."""
 
+import random
 import cocotb
 from cocotb.triggers import Timer, RisingEdge
 
@@ -127,6 +128,26 @@ async def setup_loopback(dut):
 	# Return the same list so the test can check what the monitor collects.
     return received
 
+# Helper: Wait for sending to finish, then check every received byte.
+async def finish_and_check(dut, received, expected):
+    """Check that RX received exactly what we sent."""
+    # send_byte() returns while TX is still transmitting, so wait 1 whole frame plus 5 extra clocks.
+    # The background monitor keeps collecting received bytes during this wait.
+    await Timer(FRAME_NS + 5 * CLOCK_NS, unit="ns")
+
+    assert int(dut.busy.value) == 0, "TX did not finish transmitting" # Busy should be low now, meaning TX has finished sending.
+
+	# Compare the whole received list with the whole expected list.
+    assert received == expected, (
+        f"Received sequence did not match.\n"
+        f"Expected ({len(expected)} bytes): {expected}\n"
+        f"Received ({len(received)} bytes): {received}"
+    )
+
+    # Keep watching for an unwanted extra byte after transmission ends.
+    await Timer(FRAME_NS, unit="ns")
+    assert received == expected, f"Unexpected extra received bytes: {received}"
+
 # Test: Send a known byte through the actual TX and RX modules.
 @cocotb.test()
 async def loopback_ascii_a(dut):
@@ -149,6 +170,66 @@ async def loopback_ascii_a(dut):
     await Timer(FRAME_NS, unit="ns")
     assert received == [0x41], f"Unexpected received bytes: {received}"
 
-# TODO: Test all 256 possible byte values.
-# TODO: Test consecutive transmissions.
-# TODO: Test reproducible randomized traffic.
+# Test: Send every possible byte with a short pause between frames.
+@cocotb.test()
+async def loopback_all_byte_values(dut):
+    """Verify all 256 possible byte values through TX and RX."""
+
+	# Start the clock, reset the hardware, and start watching RX.
+    # The monitor adds received bytes to this list.
+    received = await setup_loopback(dut)
+
+    # Make a list containing every number from 0 through 255.
+    expected = list(range(256))
+
+	# Send each byte in the list.
+    for byte in expected:
+        await send_byte(dut, byte) # Ask TX to send this byte, waiting first if TX is busy.
+        await Timer(FRAME_NS + BIT_NS, unit="ns") # Allow the frame to finish, then leave one idle bit.
+
+    await finish_and_check(dut, received, expected) # Check that RX received the entire list correctly.
+
+
+# Test: Send bytes as quickly as the TX interface allows.
+@cocotb.test()
+async def loopback_consecutive_transmissions(dut):
+    """Verify a complete sequence with minimal gaps between frames."""
+
+	# Start the clock, reset the hardware, and start watching RX.
+	# The monitor adds received bytes to this list.
+    received = await setup_loopback(dut)
+    
+    # Make a list containing every number from 0 through 255.
+    expected = list(range(256))
+
+	# Send each byte in the list.
+    for byte in expected:
+        await send_byte(dut, byte) # Ask TX to send this byte, waiting first if TX is busy.
+        # No extra delay is added between calls.
+
+    await finish_and_check(dut, received, expected) # Check that RX received the entire list correctly.
+
+
+# Test: Send random bytes with random amounts of waiting between requests.
+@cocotb.test()
+async def loopback_randomized_traffic(dut):
+    """Verify random byte values and gaps using a fixed random seed."""
+
+	# Start the clock, reset the hardware, and start watching RX.
+    # The monitor adds received bytes to this list.
+    received = await setup_loopback(dut)
+
+    # Use the same random sequence every run. 
+    seed = 12345
+    rng = random.Random(seed)
+    dut._log.info(f"Loopback random seed: {seed}") # Print in test log.
+
+    # Pick 256 random byte values (0-255), repeated values allowed.
+    expected = [rng.randrange(256) for _ in range(256)]
+
+    for byte in expected:
+        await send_byte(dut, byte) # Ask TX to send this byte, waiting first if TX is busy.
+        gap_clocks = rng.randrange(0, 2 * 10 * CLKS_PER_BIT + 1) # Wait a random time before requesting the next byte.
+        await Timer((gap_clocks + 1) * CLOCK_NS, unit="ns") # Add one clock to avoid a zero-length wait.
+
+    await finish_and_check(dut, received, expected) # Check that RX received the entire list correctly.
