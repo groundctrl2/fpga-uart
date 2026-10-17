@@ -7,12 +7,14 @@ on:
 
 jobs:
   test:
-    name: Test ${{ matrix.target }}
+    name: Test ${{ matrix.target }} # Show which UART target this job is testing.
     runs-on: ubuntu-24.04
 
     # Run each target as a separate job.
     strategy:
-      fail-fast: false
+      fail-fast: false # Let the other jobs finish even if one fails.
+
+      # Create one job for each test target.
       matrix:
         target:
           - uart_tx
@@ -20,21 +22,27 @@ jobs:
           - uart_loopback
 
     steps:
+      # Download the repository files onto the runner.
       - name: Check out repository
-        uses: actions/setup-python@v6
+        uses: actions/checkout@v5
 
+      # Make Python 3.12 available for running cocotb.
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
+      # Update the package list and install the HDL simulator.
       - name: Install Icarus Verilog
         run: |
           sudo apt-get update
           sudo apt-get install -y iverilog
 
+      # Install cocotb version 2.x for the Python testbenches.
       - name: Install cocotb
         run: python -m pip install "cocotb>=2.0,<3.0"
 
+      # Use the Makefile to compile and test this job's target.
+      # A failing test causes the job to fail.
       - name: Run simulation
         run: make TARGET=${{ matrix.target }}
