@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Test ${{ matrix.target }} # Show which UART target this job is testing.
+    name: Test ${{ matrix.target }} (CLKS_PER_BIT=${{ matrix.clks_per_bit }}) # Show which UART target this job is testing.
     runs-on: ubuntu-24.04
 
     # Run each target as a separate job.
@@ -20,6 +20,9 @@ jobs:
           - uart_tx
           - uart_rx
           - uart_loopback
+        clks_per_bit:
+          - 434
+          - 200
 
     steps:
       # Download the repository files onto the runner.
@@ -45,4 +48,4 @@ jobs:
       # Use the Makefile to compile and test this job's target.
       # A failing test causes the job to fail.
       - name: Run simulation
-        run: make TARGET=${{ matrix.target }}
+        run: make TARGET=${{ matrix.target }} CLKS_PER_BIT=${{ matrix.clks_per_bit }}

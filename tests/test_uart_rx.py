@@ -1,11 +1,12 @@
 """UART RX verification: bytes, false starts, framing errors, reset, and timing."""
 
+import os
 import cocotb
 from cocotb.triggers import Timer, RisingEdge
 
-# Use the same clocks-per-bit setting as uart_rx.sv.
-# At 50 MHz, each clock is 20 ns and each bit lasts 8680 ns.
-CLKS_PER_BIT = 434
+# Read the timing setting exported by the Makefile; default to 434.
+# At 50 MHz, 434 gives about 115,207 baud; 200 gives 250,000 baud.
+CLKS_PER_BIT = int(os.environ.get("CLKS_PER_BIT", "434"))
 CLOCK_NS = 20
 BIT_NS = CLKS_PER_BIT * CLOCK_NS
 

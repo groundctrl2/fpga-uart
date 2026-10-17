@@ -39,7 +39,7 @@ The project includes separate transmitter (TX) and receiver (RX) modules, plus a
 | `tests/test_uart_loopback.py` | Tests TX and RX together |
 | `docs/images/` | GTKWave screenshots of normal reception and framing-error recovery |
 | `Makefile` | Selects and runs simulation targets |
-| `.github/workflows/uart-tests.yml` | Runs all three targets in GitHub Actions |
+| `.github/workflows/uart-tests.yml` | Runs all three targets at two timing settings in GitHub Actions |
 
 ## Development Tools
 
@@ -155,9 +155,28 @@ make TARGET=uart_rx
 make TARGET=uart_loopback
 ```
 
-Each target uses a separate simulation build directory. The test output reports individual test results and an overall pass/fail summary.
+Each target and `CLKS_PER_BIT` setting uses a separate simulation build directory, named `sim_build_<target>_<clks_per_bit>`. The test output reports individual test results and an overall pass/fail summary.
 
-GitHub Actions also runs all three targets on pushes and pull requests, using Ubuntu 24.04 and Python 3.12.
+### Configurable Timing
+
+`CLKS_PER_BIT` defaults to `434`. Override it when running a test:
+
+```bash
+make TARGET=uart_tx CLKS_PER_BIT=200
+make TARGET=uart_rx CLKS_PER_BIT=200
+make TARGET=uart_loopback CLKS_PER_BIT=200
+```
+
+The Makefile passes the selected value to both the RTL and Python testbenches.
+
+At the testbench clock frequency of 50 MHz:
+
+| Clocks per Bit | Bit Duration | Baud Rate |
+|---|---|---|
+| 434 (default) | 8.68 μs | Approximately 115,207 bps |
+| 200 | 4 μs | 250,000 bps |
+
+GitHub Actions is configured to run all three targets at both settings on pushes and pull requests, using Ubuntu 24.04 and Python 3.12.
 
 ## Waveform Inspection
 
@@ -166,13 +185,13 @@ GitHub Actions also runs all three targets on pushes and pull requests, using Ub
 Generate a waveform for the ASCII `A` loopback test:
 
 ```bash
-make TARGET=uart_loopback WAVES=1 COCOTB_TEST_FILTER=loopback_ascii_a
+make TARGET=uart_loopback CLKS_PER_BIT=434 WAVES=1 COCOTB_TEST_FILTER=loopback_ascii_a
 ```
 
 Open the generated waveform in GTKWave:
 
 ```bash
-gtkwave sim_build_uart_loopback/uart_loopback.fst
+gtkwave sim_build_uart_loopback_434/uart_loopback.fst
 ```
 
 Waveform inspection confirmed:
@@ -197,8 +216,8 @@ Waveform inspection confirmed:
 Generate and open the framing-error test waveform:
 
 ```bash
-make TARGET=uart_rx WAVES=1 COCOTB_TEST_FILTER=framing_error_and_recovery
-gtkwave sim_build_uart_rx/uart_rx.fst
+make TARGET=uart_rx CLKS_PER_BIT=434 WAVES=1 COCOTB_TEST_FILTER=framing_error_and_recovery
+gtkwave sim_build_uart_rx_434/uart_rx.fst
 ```
 
 #### Full Sequence
@@ -280,6 +299,7 @@ TX and RX are tested independently before being tested together in loopback.
 | Loopback random traffic | Send 256 reproducible random bytes with varied waits, using seed `12345` |
 | Loopback sequence checks | Compare complete sent and received lists, then watch for extra bytes |
 | RX output checks | Verify one-clock result pulses and stable data between accepted bytes |
+| Configurable timing | All 6 TX, 8 RX, and 4 loopback tests pass at both `CLKS_PER_BIT=434` and `200` |
 
 The timing tests demonstrate operation for the tested combinations within ±2% sender timing mismatch; they do not establish the receiver's maximum tolerance.
 

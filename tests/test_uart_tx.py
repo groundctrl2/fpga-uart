@@ -1,11 +1,12 @@
 """UART TX verification: byte coverage, busy requests, reset, and consecutive frames."""
 
+import os
 import cocotb
 from cocotb.triggers import Timer
 
-# Match the transmitter's (uart_tx.sv) default timing parameter.
-# At 50 MHz, 434 clocks per bit gives a baud rate of 115,207 (50M/434).
-CLKS_PER_BIT = 434
+# Read the timing setting exported by the Makefile; default to 434.
+# At 50 MHz, 434 gives about 115,207 baud; 200 gives 250,000 baud.
+CLKS_PER_BIT = int(os.environ.get("CLKS_PER_BIT", "434"))
 
 # Helper: Advance the simulation by one system-clock cycle.
 async def clock_cycle(dut):

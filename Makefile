@@ -1,6 +1,13 @@
 # Choose what to test (running without a target default tests TX).
 TARGET ?= uart_tx
 
+# Use the same timing setting in the hardware and Python tests.
+CLKS_PER_BIT ?= 434
+export CLKS_PER_BIT
+
+# Override the selected top-level module's timing parameter in Icarus.
+COMPILE_ARGS += -P$(TARGET).CLKS_PER_BIT=$(CLKS_PER_BIT)
+
 SIM = icarus # Use Icarus for cocotb simulation in the Windows/MSYS2 environment.
 TOPLEVEL_LANG = verilog # SystemVerilog sources are handled through the Verilog language setting.
 
@@ -22,8 +29,8 @@ else
 export PYTHONPATH := $(CURDIR)/tests
 endif
 
-# Keep each module's compiled simulation in its own directory.
-SIM_BUILD = sim_build_$(TARGET)
+# Keep separate builds for each module and timing setting.
+SIM_BUILD = sim_build_$(TARGET)_$(CLKS_PER_BIT)
 
 # Use cocotb's build rules to compile the design and run the tests.
 include $(shell cocotb-config --makefiles)/Makefile.sim
